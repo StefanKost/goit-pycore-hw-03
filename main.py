@@ -1,5 +1,6 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 import random
+import re
 
 
 def get_days_from_today(date: str) -> int | None:
@@ -17,7 +18,6 @@ def get_days_from_today(date: str) -> int | None:
 
     today = datetime.now().date()
     diff = initial_date - today
-
     return diff.days
 
 
@@ -49,3 +49,45 @@ def get_numbers_ticket(min: int, max: int, quantity: int) -> list[int]:
 
     numbers = random.sample(range(min, max + 1), quantity)
     return sorted(numbers)
+
+
+def normalize_phone(phone_number: str) -> str:
+    """
+    Normalizes a phone number to the standard format.
+
+    :param phone_number: raw phone number string in any format
+    :return: normalized phone number string
+    """
+
+    ua_code = '38'
+    ua_phone_len = 13
+    prefix = '+'
+    normalized_number = re.sub(r"[^\d+]", "", phone_number)
+
+    if normalized_number.startswith(ua_code):
+        normalized_number = f"{prefix}{normalized_number}"
+    elif not normalized_number.startswith(prefix):
+        normalized_number = f"{prefix}{ua_code}{normalized_number}"
+
+    if normalized_number.startswith(f"{prefix}{ua_code}") and len(normalized_number) != ua_phone_len:
+        raise ValueError('Invalid phone number.')
+    return normalized_number
+
+
+assert get_days_from_today(datetime.today().strftime('%Y-%m-%d')) == 0
+assert get_days_from_today((datetime.today() + timedelta(days=10)).strftime('%Y-%m-%d')) == 10
+assert get_days_from_today((datetime.today() - timedelta(days=10)).strftime('%Y-%m-%d')) == -10
+
+assert len(get_numbers_ticket(1, 2, 1)) == 1
+assert len(get_numbers_ticket(1, 3, 2)) == 2
+assert len(get_numbers_ticket(2, 1, 2)) == 0
+
+assert normalize_phone('067\\t123 4567') == '+380671234567'
+assert normalize_phone('380501234567') == '+380501234567'
+assert normalize_phone('+38(050)123-32-34') == '+380501233234'
+try:
+    normalize_phone('38050123456')
+except ValueError:
+    assert True
+else:
+    assert False
