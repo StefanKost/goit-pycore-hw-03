@@ -74,6 +74,63 @@ def normalize_phone(phone_number: str) -> str:
     return normalized_number
 
 
+def get_upcoming_birthdays(users: list[dict[str, str]]) -> list[dict[str, str]]:
+    """
+    Generate a list of users whose birthdays occur within the next 7 days. Returns congratulation dates
+    :param users: List of users with (name and birthday)
+    :return: List of users whose birthday withing next 7 days with congratulation date
+    """
+    today = datetime.today().date()
+    upcoming_birthdays = []
+    shift_days = {5: 2, 6: 1}  # Saturday - +2 days, Sunday - +1 day
+
+    def get_next_birthday(bday: datetime.date) -> datetime.date:
+        """
+        Return the next birthday date for a given birthday
+
+        :param bday: user's birthday
+        :return: next birthday date
+        """
+        start_year = today.year
+        while True:
+            try:
+                bday_this_year = bday.replace(year=start_year)
+            except ValueError:
+                # Handle Feb 29 in non-leap years by celebrating on March 1
+                bday_this_year = datetime(today.year, 3, 1).date()
+
+            if bday_this_year >= today:
+                return bday_this_year
+
+            start_year += 1
+
+    for user in users:
+        try:
+            birthday = datetime.strptime(user["birthday"], "%Y.%m.%d").date()
+        except ValueError:
+            print(f"User {user['name']} has invalid birthday")
+            continue
+
+        # change year
+        birthday = get_next_birthday(birthday)
+
+        # Calculate days until the next birthday
+        days_until_birthday = get_days_from_today(birthday.strftime("%Y-%m-%d"))
+
+        if days_until_birthday is None or days_until_birthday > 7:
+            continue
+
+        # shift congratulation day to Monday if birthday on Saturday and Sunday
+        congratulation_date = birthday + timedelta(days=shift_days.get(birthday.weekday(), 0))
+
+        upcoming_birthdays.append({
+            "name": user["name"],
+            "congratulation_date": congratulation_date.strftime("%Y.%m.%d")
+        })
+
+    return upcoming_birthdays
+
+
 assert get_days_from_today(datetime.today().strftime('%Y-%m-%d')) == 0
 assert get_days_from_today((datetime.today() + timedelta(days=10)).strftime('%Y-%m-%d')) == 10
 assert get_days_from_today((datetime.today() - timedelta(days=10)).strftime('%Y-%m-%d')) == -10
@@ -91,3 +148,8 @@ except ValueError:
     assert True
 else:
     assert False
+
+assert len(get_upcoming_birthdays([
+    {"name": "John Doe", "birthday": (datetime.today() - timedelta(days=(years := 25) * 365 + years // 4)).strftime('%Y.%m.%d') },
+    {"name": "Jane Smith", "birthday": (datetime.today() - timedelta(days=(years := 35) * 365 + years // 4 + 100)).strftime('%Y.%m.%d') },
+])) == 1
